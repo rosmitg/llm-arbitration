@@ -35,7 +35,7 @@ class ModelVersion(str, Enum):
     This diversity is the core mechanism of the system."""
     GPT4O = "gpt-4o"
     CLAUDE_HAIKU = "claude-haiku-4-5-20251001"
-    GEMINI_FLASH = "gemini-2.0-flash-lite"
+    GEMINI_FLASH = "gemini-3.5-flash-lite"
 
 
 # ─────────────────────────────────────────
