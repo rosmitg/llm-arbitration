@@ -108,50 +108,84 @@ class BenchmarkExample(BaseModel):
 # LLM-AggreFact
 # ─────────────────────────────────────────
 
-
 def load_llm_aggrefact(
     max_examples: int = 500,
 ) -> list[BenchmarkExample]:
     """
     LLM-AggreFact groundedness benchmark.
 
-    Raw fields:
-        doc
-        claim
-        label
+    Stratified sample across underlying datasets and labels.
+    Fixed seed for reproducibility.
 
-    label:
-        1 = claim supported by document
-        0 = claim unsupported by document
-
-    Evaluation type:
-        POINTWISE
-
-    Research question:
-        Can the judge correctly determine whether
-        the supplied evidence supports the claim?
+    IMPORTANT:
+    IDs use the ORIGINAL dataset row index so existing cached
+    results remain attached to the correct examples.
     """
+    import pandas as pd
 
     dataset = load_dataset(
         "lytang/LLM-AggreFact",
         split="test",
     )
 
+    df = pd.DataFrame(dataset)
+
+    # Preserve original Hugging Face row index
+    df["_source_index"] = df.index
+
+    # Count actual dataset/label groups
+    n_groups = df.groupby(["dataset", "label"]).ngroups
+    per_group = max(1, max_examples // n_groups)
+
+    sampled_parts = []
+    for (_, _), group in df.groupby(["dataset", "label"]):
+        sampled_parts.append(
+            group.sample(
+                n=min(len(group), per_group),
+                random_state=42,
+            )
+        )
+
+    sampled = pd.concat(sampled_parts)
+
+    # Top up if small groups prevented reaching max_examples
+    if len(sampled) < max_examples:
+        remaining = df[
+            ~df["_source_index"].isin(sampled["_source_index"])
+        ]
+        extra_count = min(
+            len(remaining),
+            max_examples - len(sampled),
+        )
+        if extra_count > 0:
+            extra = remaining.sample(
+                n=extra_count,
+                random_state=42,
+            )
+            sampled = pd.concat([sampled, extra])
+
+    # Shuffle deterministically
+    sampled = sampled.sample(
+        n=min(len(sampled), max_examples),
+        random_state=42,
+    )
+
     examples: list[BenchmarkExample] = []
 
-    for i, row in enumerate(dataset):
-        if len(examples) >= max_examples:
-            break
-
+    for _, row in sampled.iterrows():
         gold = (
             GoldLabel.PASS
             if int(row["label"]) == 1
             else GoldLabel.FAIL
         )
 
+        contamination_identifier = row.get("contamination_identifier")
+        if pd.isna(contamination_identifier):
+            contamination_identifier = None
+
         examples.append(
             BenchmarkExample(
-                id=f"aggrefact_{i}",
+                id=f"aggrefact_{int(row['_source_index'])}",
                 task_type=TaskType.GROUNDEDNESS,
                 evaluation_format=EvaluationFormat.POINTWISE,
                 input=(
@@ -163,12 +197,15 @@ def load_llm_aggrefact(
                 context=row["doc"],
                 gold_label=gold,
                 source="llm_aggrefact",
-                subset=None,
+                subset=row["dataset"],
+                metadata={
+                    "source_index": int(row["_source_index"]),
+                    "contamination_identifier": contamination_identifier,
+                },
             )
         )
 
     return examples
-
 
 # ─────────────────────────────────────────
 # LLMBar

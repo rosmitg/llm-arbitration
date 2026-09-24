@@ -383,7 +383,7 @@ def run_benchmark(
 
 if __name__ == "__main__":
     run_benchmark(
-        aggrefact_max=5,
-        llmbar_max=5,
-        judgebench_max=5,
+        aggrefact_max=500,
+        llmbar_max=419,
+        judgebench_max=350,
     )
