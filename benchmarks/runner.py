@@ -272,14 +272,18 @@ def save_result(result: JudgeResult) -> None:
 
 
 def load_results() -> list[JudgeResult]:
-    """
-    Load all results from CSV.
-    Used by metrics.py and calibration.py.
-    """
+    """Load all results from CSV."""
     if not RESULTS_FILE.exists():
         return []
     df = pd.read_csv(RESULTS_FILE)
-    return [JudgeResult(**row) for row in df.to_dict("records")]
+    records = df.to_dict("records")
+    # Replace NaN with None for Optional fields
+    cleaned = [
+        {k: (None if isinstance(v, float) and pd.isna(v) else v)
+         for k, v in row.items()}
+        for row in records
+    ]
+    return [JudgeResult(**row) for row in cleaned]
 
 
 def already_run(example_id: str, judge: str) -> bool:
