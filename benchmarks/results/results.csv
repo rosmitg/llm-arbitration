@@ -1,0 +1,4 @@
+example_id,task_type,source,subset,judge,model,gold_label,prediction,correct,latency_ms,input_tokens,output_tokens,estimated_cost_usd,raw_response
+aggrefact_0,groundedness,llm_aggrefact,,anthropic,claude-haiku-4-5-20251001,pass,pass,True,1867.56,418,1,0.000106,PASS
+aggrefact_1,groundedness,llm_aggrefact,,anthropic,claude-haiku-4-5-20251001,pass,pass,True,1012.3,458,1,0.000116,PASS
+aggrefact_2,groundedness,llm_aggrefact,,anthropic,claude-haiku-4-5-20251001,pass,pass,True,990.63,486,1,0.000123,PASS
